@@ -1,328 +1,327 @@
 package jminusminus;
 
-import static jminusminus.CLConstants.GOTO;
-import static jminusminus.CLConstants.IADD;
-import static jminusminus.CLConstants.ICONST_0;
-import static jminusminus.CLConstants.ICONST_1;
-import static jminusminus.CLConstants.INEG;
-import static jminusminus.CLConstants.ISUB;
+import static jminusminus.CLConstants.*;
 
 /**
- * This abstract base class is the AST node for a unary expression --- an expression with a single operand.
+ * This abstract base class is the AST node for an unary expression.
+ * A unary expression has a single operand.
  */
+
 abstract class JUnaryExpression extends JExpression {
-    /**
-     * The unary operator.
-     */
-    protected String operator;
+
+    /** The operator. */
+    private String operator;
+
+    /** The operand. */
+    protected JExpression arg;
 
     /**
-     * The operand.
+     * Constructs an AST node for an unary expression given its line number, the
+     * unary operator, and the operand.
+     * 
+     * @param line
+     *            line in which the unary expression occurs in the source file.
+     * @param operator
+     *            the unary operator.
+     * @param arg
+     *            the operand.
      */
-    protected JExpression operand;
 
-    /**
-     * Constructs an AST node for a unary expression.
-     *
-     * @param line     line in which the unary expression occurs in the source file.
-     * @param operator the unary operator.
-     * @param operand  the operand.
-     */
-    protected JUnaryExpression(int line, String operator, JExpression operand) {
+    protected JUnaryExpression(int line, String operator, JExpression arg) {
         super(line);
         this.operator = operator;
-        this.operand = operand;
+        this.arg = arg;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public void toJSON(JSONElement json) {
-        JSONElement e = new JSONElement();
-        json.addChild("JUnaryExpression:" + line, e);
-        e.addAttribute("operator", operator);
-        e.addAttribute("type", type == null ? "" : type.toString());
-        JSONElement e1 = new JSONElement();
-        e.addChild("Operand", e1);
-        operand.toJSON(e1);
-    }
-}
-
-/**
- * The AST node for a logical NOT (!) expression.
- */
-class JLogicalNotOp extends JUnaryExpression {
-    /**
-     * Constructs an AST for a logical NOT expression.
-     *
-     * @param line line in which the logical NOT expression occurs in the source file.
-     * @param arg  the operand.
-     */
-    public JLogicalNotOp(int line, JExpression arg) {
-        super(line, "!", arg);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public JExpression analyze(Context context) {
-        operand = operand.analyze(context);
-        operand.type().mustMatchExpected(line(), Type.BOOLEAN);
-        type = Type.BOOLEAN;
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public void codegen(CLEmitter output) {
-        String falseLabel = output.createLabel();
-        String trueLabel = output.createLabel();
-        this.codegen(output, falseLabel, false);
-        output.addNoArgInstruction(ICONST_1); // true
-        output.addBranchInstruction(GOTO, trueLabel);
-        output.addLabel(falseLabel);
-        output.addNoArgInstruction(ICONST_0); // false
-        output.addLabel(trueLabel);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public void codegen(CLEmitter output, String targetLabel, boolean onTrue) {
-        operand.codegen(output, targetLabel, !onTrue);
-    }
 }
 
 /**
  * The AST node for a unary negation (-) expression.
  */
+
 class JNegateOp extends JUnaryExpression {
+
     /**
-     * Constructs an AST node for a negation expression.
-     *
-     * @param line    line in which the negation expression occurs in the source file.
-     * @param operand the operand.
+     * Constructs an AST node for a negation expression given its line number,
+     * and the operand.
+     * 
+     * @param line
+     *            line in which the negation expression occurs in the source
+     *            file.
+     * @param arg
+     *            the operand.
      */
-    public JNegateOp(int line, JExpression operand) {
-        super(line, "-", operand);
+
+    public JNegateOp(int line, JExpression arg) {
+        super(line, "-", arg);
     }
 
     /**
-     * {@inheritDoc}
+     * Analyzing the negation operation involves analyzing its operand, checking
+     * its type and determining the result type.
+     * 
+     * @param context
+     *            context in which names are resolved.
+     * @return the analyzed (and possibly rewritten) AST subtree.
      */
+
     public JExpression analyze(Context context) {
-        operand = operand.analyze(context);
-        operand.type().mustMatchExpected(line(), Type.INT);
+        arg = arg.analyze(context);
+        arg.type().mustMatchExpected(line(), Type.INT);
         type = Type.INT;
         return this;
     }
 
     /**
-     * {@inheritDoc}
+     * Generating code for the negation operation involves generating code for
+     * the operand, and then the negation instruction.
+     * 
+     * @param output
+     *            the code emitter (basically an abstraction for producing the
+     *            .class file).
      */
+
     public void codegen(CLEmitter output) {
-        operand.codegen(output);
+        arg.codegen(output);
         output.addNoArgInstruction(INEG);
     }
+
 }
 
 /**
- * The AST node for a post-decrement (--) expression.
+ * The AST node for a logical NOT (!) expression.
  */
-class JPostDecrementOp extends JUnaryExpression {
+
+class JLogicalNotOp extends JUnaryExpression {
+
     /**
-     * Constructs an AST node for a post-decrement expression.
-     *
-     * @param line    line in which the expression occurs in the source file.
-     * @param operand the operand.
+     * Constructs an AST for a logical NOT expression given its line number, and
+     * the operand.
+     * 
+     * @param line
+     *            line in which the logical NOT expression occurs in the source
+     *            file.
+     * @param arg
+     *            the operand.
      */
-    public JPostDecrementOp(int line, JExpression operand) {
-        super(line, "-- (post)", operand);
+
+    public JLogicalNotOp(int line, JExpression arg) {
+        super(line, "!", arg);
     }
 
     /**
-     * {@inheritDoc}
+     * Analyzing a logical NOT operation means analyzing its operand, insuring
+     * it's a boolean, and setting the result to boolean.
+     * 
+     * @param context
+     *            context in which names are resolved.
      */
+
     public JExpression analyze(Context context) {
-        if (!(operand instanceof JLhs)) {
-            JAST.compilationUnit.reportSemanticError(line, "operand to -- must have an LValue.");
+        arg = (JExpression) arg.analyze(context);
+        arg.type().mustMatchExpected(line(), Type.BOOLEAN);
+        type = Type.BOOLEAN;
+        return this;
+    }
+
+    /**
+     * Generates code for the case where we actually want a boolean value 
+     * ({@code true} or {@code false}) computed onto the stack. For example,
+     * assignment to a boolean variable.
+     * 
+     * @param output
+     *            the code emitter (basically an abstraction for producing the
+     *            .class file).
+     */
+
+    public void codegen(CLEmitter output) {
+        String elseLabel = output.createLabel();
+        String endIfLabel = output.createLabel();
+        this.codegen(output, elseLabel, false);
+        output.addNoArgInstruction(ICONST_1); // true
+        output.addBranchInstruction(GOTO, endIfLabel);
+        output.addLabel(elseLabel);
+        output.addNoArgInstruction(ICONST_0); // false
+        output.addLabel(endIfLabel);
+    }
+
+    /**
+     * The code generation necessary for branching simply flips the condition on
+     * which we branch.
+     * 
+     * @param output
+     *            the code emitter (basically an abstraction for producing the
+     *            .class file).
+     */
+
+    public void codegen(CLEmitter output, String targetLabel, boolean onTrue) {
+        arg.codegen(output, targetLabel, !onTrue);
+    }
+
+}
+
+/**
+ * The AST node for an expr--.
+ */
+
+class JPostDecrementOp extends JUnaryExpression {
+
+    /**
+     * Constructs an AST node for an expr-- expression given its line number, and
+     * the operand.
+     * 
+     * @param line
+     *            line in which the expression occurs in the source file.
+     * @param arg
+     *            the operand.
+     */
+
+    public JPostDecrementOp(int line, JExpression arg) {
+        super(line, "post--", arg);
+    }
+
+    /**
+     * Analyzes the operand as a lhs (since there is a side effect), checks types
+     * and determines the type of the result.
+     * 
+     * @param context
+     *            context in which names are resolved.
+     * @return the analyzed (and possibly rewritten) AST subtree.
+     */
+
+    public JExpression analyze(Context context) {
+        if (!(arg instanceof JLhs)) {
+            JAST.compilationUnit.reportSemanticError(line,
+                    "Operand to expr-- must have an LValue.");
             type = Type.ANY;
         } else {
-            operand = operand.analyze(context);
-            operand.type().mustMatchExpected(line(), Type.INT);
+            arg = (JExpression) arg.analyze(context);
+            arg.type().mustMatchExpected(line(), Type.INT);
             type = Type.INT;
         }
         return this;
     }
 
     /**
-     * {@inheritDoc}
+     * In generating code for a post-decrement operation, we treat simple
+     * variable ({@link JVariable}) operands specially since the JVM has an 
+     * increment instruction. 
+     * Otherwise, we rely on the {@link JLhs} code generation support for
+     * generating the proper code. Notice that we distinguish between
+     * expressions that are statement expressions and those that are not; we
+     * insure the proper value (before the decrement) is left atop the stack in
+     * the latter case.
+     * 
+     * @param output
+     *            the code emitter (basically an abstraction for producing the
+     *            .class file).
      */
+
     public void codegen(CLEmitter output) {
-        if (operand instanceof JVariable) {
-            // A local variable; otherwise analyze() would have replaced it with an explicit field selection.
-            int offset = ((LocalVariableDefn) ((JVariable) operand).iDefn()).offset();
+        if (arg instanceof JVariable) {
+            // A local variable; otherwise analyze() would
+            // have replaced it with an explicit field selection.
+            int offset = ((LocalVariableDefn) ((JVariable) arg).iDefn())
+                    .offset();
             if (!isStatementExpression) {
-                // Loading its original rvalue.
-                operand.codegen(output);
+                // Loading its original rvalue
+                arg.codegen(output);
             }
             output.addIINCInstruction(offset, -1);
         } else {
-            ((JLhs) operand).codegenLoadLhsLvalue(output);
-            ((JLhs) operand).codegenLoadLhsRvalue(output);
+            ((JLhs) arg).codegenLoadLhsLvalue(output);
+            ((JLhs) arg).codegenLoadLhsRvalue(output);
             if (!isStatementExpression) {
-                // Loading its original rvalue.
-                ((JLhs) operand).codegenDuplicateRvalue(output);
+                // Loading its original rvalue
+                ((JLhs) arg).codegenDuplicateRvalue(output);
             }
             output.addNoArgInstruction(ICONST_1);
             output.addNoArgInstruction(ISUB);
-            ((JLhs) operand).codegenStore(output);
+            ((JLhs) arg).codegenStore(output);
         }
     }
+
 }
 
 /**
- * The AST node for pre-increment (++) expression.
+ * The AST node for a ++expr expression.
  */
+
 class JPreIncrementOp extends JUnaryExpression {
+
     /**
-     * Constructs an AST node for a pre-increment expression.
-     *
-     * @param line    line in which the expression occurs in the source file.
-     * @param operand the operand.
+     * Constructs an AST node for a ++expr given its line number, and the
+     * operand.
+     * 
+     * @param line
+     *            line in which the expression occurs in the source file.
+     * @param arg
+     *            the operand.
      */
-    public JPreIncrementOp(int line, JExpression operand) {
-        super(line, "++ (pre)", operand);
+
+    public JPreIncrementOp(int line, JExpression arg) {
+        super(line, "++pre", arg);
     }
 
     /**
-     * {@inheritDoc}
+     * Analyzes the operand as a lhs (since there is a side effect), check types
+     * and determine the type of the result.
+     * 
+     * @param context
+     *            context in which names are resolved.
+     * @return the analyzed (and possibly rewritten) AST subtree.
      */
+
     public JExpression analyze(Context context) {
-        if (!(operand instanceof JLhs)) {
-            JAST.compilationUnit.reportSemanticError(line, "operand to ++ must have an LValue.");
+        if (!(arg instanceof JLhs)) {
+            JAST.compilationUnit.reportSemanticError(line,
+                    "Operand to ++expr must have an LValue.");
             type = Type.ANY;
         } else {
-            operand = operand.analyze(context);
-            operand.type().mustMatchExpected(line(), Type.INT);
+            arg = (JExpression) arg.analyze(context);
+            arg.type().mustMatchExpected(line(), Type.INT);
             type = Type.INT;
         }
         return this;
     }
 
     /**
-     * {@inheritDoc}
+     * In generating code for a pre-increment operation, we treat simple
+     * variable ({@link JVariable}) operands specially since the JVM has an 
+     * increment instruction. 
+     * Otherwise, we rely on the {@link JLhs} code generation support for
+     * generating the proper code. Notice that we distinguish between
+     * expressions that are statement expressions and those that are not; we
+     * insure the proper value (after the increment) is left atop the stack in
+     * the latter case.
+     * 
+     * @param output
+     *            the code emitter (basically an abstraction for producing the
+     *            .class file).
      */
+
     public void codegen(CLEmitter output) {
-        if (operand instanceof JVariable) {
-            // A local variable; otherwise analyze() would have replaced it with an explicit field selection.
-            int offset = ((LocalVariableDefn) ((JVariable) operand).iDefn()).offset();
+        if (arg instanceof JVariable) {
+            // A local variable; otherwise analyze() would
+            // have replaced it with an explicit field selection.
+            int offset = ((LocalVariableDefn) ((JVariable) arg).iDefn())
+                    .offset();
             output.addIINCInstruction(offset, 1);
             if (!isStatementExpression) {
-                // Loading its original rvalue.
-                operand.codegen(output);
+                // Loading its original rvalue
+                arg.codegen(output);
             }
         } else {
-            ((JLhs) operand).codegenLoadLhsLvalue(output);
-            ((JLhs) operand).codegenLoadLhsRvalue(output);
+            ((JLhs) arg).codegenLoadLhsLvalue(output);
+            ((JLhs) arg).codegenLoadLhsRvalue(output);
             output.addNoArgInstruction(ICONST_1);
             output.addNoArgInstruction(IADD);
             if (!isStatementExpression) {
-                // Loading its original rvalue.
-                ((JLhs) operand).codegenDuplicateRvalue(output);
+                // Loading its original rvalue
+                ((JLhs) arg).codegenDuplicateRvalue(output);
             }
-            ((JLhs) operand).codegenStore(output);
+            ((JLhs) arg).codegenStore(output);
         }
     }
-}
 
-/**
- * The AST node for a unary plus (+) expression.
- */
-class JUnaryPlusOp extends JUnaryExpression {
-    /**
-     * Constructs an AST node for a unary plus expression.
-     *
-     * @param line    line in which the unary plus expression occurs in the source file.
-     * @param operand the operand.
-     */
-    public JUnaryPlusOp(int line, JExpression operand) {
-        super(line, "+", operand);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public JExpression analyze(Context context) {
-        // TODO
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public void codegen(CLEmitter output) {
-        // TODO
-    }
-}
-
-/**
- * The AST node for post-increment (++) expression.
- */
-class JPostIncrementOp extends JUnaryExpression {
-    /**
-     * Constructs an AST node for a post-increment expression.
-     *
-     * @param line    line in which the expression occurs in the source file.
-     * @param operand the operand.
-     */
-    public JPostIncrementOp(int line, JExpression operand) {
-        super(line, "++ (post)", operand);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public JExpression analyze(Context context) {
-        // TODO
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public void codegen(CLEmitter output) {
-        // TODO
-    }
-}
-
-/**
- * The AST node for a pre-decrement (--) expression.
- */
-class JPreDecrementOp extends JUnaryExpression {
-    /**
-     * Constructs an AST node for a pre-decrement expression.
-     *
-     * @param line    line in which the expression occurs in the source file.
-     * @param operand the operand.
-     */
-    public JPreDecrementOp(int line, JExpression operand) {
-        super(line, "-- (pre)", operand);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public JExpression analyze(Context context) {
-        // TODO
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public void codegen(CLEmitter output) {
-        // TODO
-    }
 }

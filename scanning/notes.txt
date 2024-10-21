@@ -1,0 +1,23 @@
+1. Provide a high-level description (ie, using minimal amount of technical jargon) of each problem
+in no more than 100 words.
+
+Problem 1 (Multiline Comment): I added the ability for the scanner to recognize and properly handle multiline comments. This involved making sure that any text enclosed between /* and */ is ignored by the scanner, which allows the parser to focus only on the relevant code elements.
+
+Problem 2 (Reserved Words): Expanded the scanner's reserved words list to include additional keywords essential for the j-- language. Making sure that these words are correctly identified and differentiated from user-defined identifiers during the scanning process.
+
+Problem 3 (Operators): I improved the scanner to identify different operators like +=, -=, ==, and others. Making sure that mathematical and logical operations are correctly interpreted during compilation.
+
+Problem 4 (Literals): I added support for long and double numbers. This involved handling numbers with suffixes like L or D, as well as managing decimal points and exponents to accurately recognize these types of literals.
+
+2. Did you receive help from anyone? List their names, status (classmate, course staff, other), and
+the nature of help received.
+
+Name                   Status           Help Received
+----                   ------           -------------
+
+...                    ...              ...
+
+3. List any other comments here. Feel free to provide any feedback on how much you learned from
+doing the assignment, and whether you enjoyed doing it.
+
+Working on this assignment was really interesting and taught me a lot about how compilers work. I enjoyed figuring out how to handle different types of numbers and making sure the scanner correctly identifies everything. It was a bit challenging at times, especially with the double literals but i was able to figure it out.

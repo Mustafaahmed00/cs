@@ -1,9 +1,12 @@
+
 package jminusminus;
+import java.io.LineNumberReader;
+import java.io.FileReader;
+
+
 
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.LineNumberReader;
 import java.util.Hashtable;
 
 import static jminusminus.TokenKind.*;
@@ -46,7 +49,7 @@ class Scanner {
         this.fileName = fileName;
         isInError = false;
 
-        // Keywords in j--
+        // Initialize keywords in j--
         reserved = new Hashtable<>();
         reserved.put(ABSTRACT.image(), ABSTRACT);
         reserved.put(BOOLEAN.image(), BOOLEAN);
@@ -73,6 +76,19 @@ class Scanner {
         reserved.put(VOID.image(), VOID);
         reserved.put(WHILE.image(), WHILE);
 
+        // --- Added for Problem 2: New Reserved Words ---
+        reserved.put(BREAK.image(), BREAK);
+        reserved.put(CASE.image(), CASE);
+        reserved.put(CONTINUE.image(), CONTINUE);
+        reserved.put(DEFAULT.image(), DEFAULT);
+        reserved.put(DOUBLE.image(), DOUBLE);
+        reserved.put(FOR.image(), FOR);
+        reserved.put(LONG.image(), LONG);
+        reserved.put(SWITCH.image(), SWITCH);
+        reserved.put(DO.image(), DO);
+
+        // --- End of additions ---
+
         // Prime the pump.
         nextCh();
     }
@@ -86,32 +102,57 @@ class Scanner {
         StringBuilder buffer;
         boolean moreWhiteSpace = true;
         while (moreWhiteSpace) {
+            // Skip any whitespace characters
             while (isWhitespace(ch)) {
                 nextCh();
             }
+
             if (ch == '/') {
                 nextCh();
                 if (ch == '/') {
-                    // CharReader maps all new lines to '\n'.
+                    // Single-line comment, skip until end of line
                     while (ch != '\n' && ch != EOFCH) {
                         nextCh();
                     }
+                } else if (ch == '*') {
+                    // Multiline comment, skip until */
+                    nextCh(); // Skip the '*' character
+                    boolean commentClosed = false;
+                    while (!commentClosed) {
+                        if (ch == EOFCH) {
+                            reportScannerError("Unterminated multiline comment");
+                            return new TokenInfo(EOF, line);
+                        }
+                        if (ch == '*') {
+                            nextCh();
+                            if (ch == '/') {
+                                commentClosed = true;
+                                nextCh(); // Skip the '/' character
+                            }
+                        } else {
+                            nextCh();
+                        }
+                    }
+                } else if (ch == '=') {
+                    // Handle '/=' operator
+                    nextCh();
+                    return new TokenInfo(DIV_ASSIGN, line);
                 } else {
-                    reportScannerError("operator / is not supported in j--");
+                    // '/' is not part of a comment; it's the DIV operator
+                    return new TokenInfo(DIV, line);
                 }
             } else {
                 moreWhiteSpace = false;
             }
         }
-        switch (ch) {
+
+
+            switch (ch) {
             case EOFCH:
                 return new TokenInfo(EOF, line);
             case ',':
                 nextCh();
                 return new TokenInfo(COMMA, line);
-            case '.':
-                nextCh();
-                return new TokenInfo(DOT, line);
             case '[':
                 nextCh();
                 return new TokenInfo(LBRACK, line);
@@ -133,14 +174,25 @@ class Scanner {
             case ';':
                 nextCh();
                 return new TokenInfo(SEMI, line);
+
+            case '?':
+                nextCh();
+                return new TokenInfo(QUESTION, line);
+            case ':':
+                nextCh();
+                return new TokenInfo(COLON, line);
             case '-':
                 nextCh();
-                if (ch == '-') {
+                if (ch == '=') {
+                    nextCh();
+                    return new TokenInfo(MINUS_ASSIGN, line);
+                } else if (ch == '-') {
                     nextCh();
                     return new TokenInfo(DEC, line);
                 } else {
                     return new TokenInfo(MINUS, line);
                 }
+
             case '+':
                 nextCh();
                 if (ch == '=') {
@@ -154,7 +206,112 @@ class Scanner {
                 }
             case '*':
                 nextCh();
-                return new TokenInfo(STAR, line);
+                if (ch == '=') {
+                    nextCh();
+                    return new TokenInfo(STAR_ASSIGN, line);
+                } else {
+                    return new TokenInfo(STAR, line);
+                }
+
+                case '.':
+                    nextCh(); // Consume '.'
+                    if (isDigit(ch)) {
+                        buffer = new StringBuilder();
+                        buffer.append('.');
+                        // Scan fractional digits
+                        while (isDigit(ch)) {
+                            buffer.append(ch);
+                            nextCh();
+                        }
+
+                        // Check for exponent
+                        if (ch == 'e' || ch == 'E') {
+                            buffer.append(ch);
+                            nextCh();
+                            // Optional '+' or '-' after 'e'/'E'
+                            if (ch == '+' || ch == '-') {
+                                buffer.append(ch);
+                                nextCh();
+                            }
+                            // Must have at least one digit after 'e'/'E'
+                            if (isDigit(ch)) {
+                                while (isDigit(ch)) {
+                                    buffer.append(ch);
+                                    nextCh();
+                                }
+                            } else {
+                                reportScannerError("Invalid exponent format");
+                            }
+                        }
+
+                        // Check for suffix
+                        if (ch == 'D' || ch == 'd') {
+                            buffer.append(ch);
+                            nextCh();
+                            return new TokenInfo(DOUBLE_LITERAL, buffer.toString(), line);
+                        }
+
+                        // Determine token kind
+                        return new TokenInfo(DOUBLE_LITERAL, buffer.toString(), line);
+                    } else {
+                        // It's just a DOT token
+                        return new TokenInfo(DOT, line);
+                    }
+
+
+                case '%':
+                nextCh();
+                if (ch == '=') {
+                    nextCh();
+                    return new TokenInfo(MOD_ASSIGN, line);
+                } else {
+                    return new TokenInfo(MOD, line);
+                }
+            case '!':
+                nextCh();
+                if (ch == '=') {
+                    nextCh();
+                    return new TokenInfo(NOT_EQUAL, line);
+                } else {
+                    return new TokenInfo(LNOT, line);
+                }
+            case '>':
+                nextCh();
+                if (ch == '=') {
+                    nextCh();
+                    return new TokenInfo(GREATER_EQUAL, line);
+                } else {
+                    return new TokenInfo(GT, line);
+                }
+            case '<':
+                nextCh();
+                if (ch == '=') {
+                    nextCh();
+                    return new TokenInfo(LE, line);
+                } else {
+                    return new TokenInfo(LT, line);
+                }
+            case '|':
+                nextCh();
+                if (ch == '|') {
+                    nextCh();
+                    return new TokenInfo(OR_OR, line);
+                } else {
+                    reportScannerError("operator | is not supported in j--");
+                    return getNextToken();
+                }
+            case '&':
+                nextCh();
+                if (ch == '&') {
+                    nextCh();
+                    return new TokenInfo(LAND, line);
+                } else {
+                    return new TokenInfo(AMPERSAND, line);
+                }
+            case '~':
+                nextCh();
+                return new TokenInfo(TILDE, line);
+
             case '=':
                 nextCh();
                 if (ch == '=') {
@@ -162,30 +319,6 @@ class Scanner {
                     return new TokenInfo(EQUAL, line);
                 } else {
                     return new TokenInfo(ASSIGN, line);
-                }
-            case '>':
-                nextCh();
-                return new TokenInfo(GT, line);
-            case '<':
-                nextCh();
-                if (ch == '=') {
-                    nextCh();
-                    return new TokenInfo(LE, line);
-                } else {
-                    reportScannerError("operator < is not supported in j--");
-                    return getNextToken();
-                }
-            case '!':
-                nextCh();
-                return new TokenInfo(LNOT, line);
-            case '&':
-                nextCh();
-                if (ch == '&') {
-                    nextCh();
-                    return new TokenInfo(LAND, line);
-                } else {
-                    reportScannerError("operator & is not supported in j--");
-                    return getNextToken();
                 }
             case '\'':
                 buffer = new StringBuilder();
@@ -203,9 +336,12 @@ class Scanner {
                     nextCh();
                     return new TokenInfo(CHAR_LITERAL, buffer.toString(), line);
                 } else {
-                    // Expected a '; report error and try to recover.
                     reportScannerError(ch + " found by scanner where closing ' was expected");
-                    while (ch != '\'' && ch != ';' && ch != '\n') {
+                    while (ch != '\'' && ch != ';' && ch != '\n' && ch != EOFCH) {
+                        nextCh();
+                    }
+                    if (ch == '\'') {
+                        buffer.append('\'');
                         nextCh();
                     }
                     return new TokenInfo(CHAR_LITERAL, buffer.toString(), line);
@@ -228,50 +364,109 @@ class Scanner {
                 } else if (ch == EOFCH) {
                     reportScannerError("unexpected end of file found in string");
                 } else {
-                    // Scan the closing ".
+                    // Scan the closing "
                     nextCh();
                     buffer.append("\"");
                 }
                 return new TokenInfo(STRING_LITERAL, buffer.toString(), line);
-            case '0':
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-            case '8':
-            case '9':
-                buffer = new StringBuilder();
-                while (isDigit(ch)) {
-                    buffer.append(ch);
-                    nextCh();
-                }
-                return new TokenInfo(INT_LITERAL, buffer.toString(), line);
-            default:
-                if (isIdentifierStart(ch)) {
+                case '0':
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                case '6':
+                case '7':
+                case '8':
+                case '9':
                     buffer = new StringBuilder();
-                    while (isIdentifierPart(ch)) {
+                    boolean isDouble = false;
+                    boolean isLong = false;
+                    boolean hasExponent = false;
+
+                    // Scan integer part
+                    while (isDigit(ch)) {
                         buffer.append(ch);
                         nextCh();
                     }
-                    String identifier = buffer.toString();
-                    if (reserved.containsKey(identifier)) {
-                        return new TokenInfo(reserved.get(identifier), line);
-                    } else {
-                        return new TokenInfo(IDENTIFIER, identifier, line);
+
+                    // Check for decimal point
+                    if (ch == '.') {
+                        isDouble = true;
+                        buffer.append(ch);
+                        nextCh();
+                        // Scan fractional part
+                        while (isDigit(ch)) {
+                            buffer.append(ch);
+                            nextCh();
+                        }
                     }
-                } else {
-                    reportScannerError("unidentified input token '%c'", ch);
-                    nextCh();
-                    return getNextToken();
-                }
-        }
+
+                    // Check for exponent
+                    if (ch == 'e' || ch == 'E') {
+                        isDouble = true;
+                        hasExponent = true;
+                        buffer.append(ch);
+                        nextCh();
+                        // Optional '+' or '-' after 'e'/'E'
+                        if (ch == '+' || ch == '-') {
+                            buffer.append(ch);
+                            nextCh();
+                        }
+                        // Must have at least one digit after 'e'/'E'
+                        if (isDigit(ch)) {
+                            while (isDigit(ch)) {
+                                buffer.append(ch);
+                                nextCh();
+                            }
+                        } else {
+                            reportScannerError("Invalid exponent format");
+                        }
+                    }
+
+                    // Check for suffix
+                    if (ch == 'L' || ch == 'l') {
+                        isLong = true;
+                        buffer.append(ch);
+                        nextCh();
+                        return new TokenInfo(LONG_LITERAL, buffer.toString(), line);
+                    } else if (ch == 'D' || ch == 'd') {
+                        isDouble = true;
+                        buffer.append(ch);
+                        nextCh();
+                        return new TokenInfo(DOUBLE_LITERAL, buffer.toString(), line);
+                    }
+
+                    // Determine the token kind based on flags
+                    if (isDouble) {
+                        return new TokenInfo(DOUBLE_LITERAL, buffer.toString(), line);
+                    } else {
+                        return new TokenInfo(INT_LITERAL, buffer.toString(), line);
+                    }
+
+                default:
+                    if (isIdentifierStart(ch)) {
+                        buffer = new StringBuilder();
+                        while (isIdentifierPart(ch)) {
+                            buffer.append(ch);
+                            nextCh();
+                        }
+                        String identifier = buffer.toString();
+                        if (reserved.containsKey(identifier)) {
+                            return new TokenInfo(reserved.get(identifier), line);
+                        } else {
+                            return new TokenInfo(IDENTIFIER, identifier, line);
+                        }
+                    } else {
+                        reportScannerError("unidentified input token '" + ch + "'");
+                        nextCh();
+                        return getNextToken(); // Attempt to recover by getting the next token
+                    }
+            }
     }
 
+
     /**
-     * Returns true if an error has occurred, and false otherwise.
      *
      * @return true if an error has occurred, and false otherwise.
      */
@@ -280,7 +475,6 @@ class Scanner {
     }
 
     /**
-     * Returns the name of the source file.
      *
      * @return the name of the source file.
      */
@@ -316,7 +510,7 @@ class Scanner {
                 nextCh();
                 return "\\\\";
             default:
-                reportScannerError("Badly formed escape: \\%c", ch);
+                reportScannerError("Badly formed escape: \\" + ch);
                 nextCh();
                 return "";
         }
@@ -329,11 +523,11 @@ class Scanner {
             ch = input.nextChar();
         } catch (Exception e) {
             reportScannerError("unable to read characters from input");
+            ch = EOFCH; // ch = EOFCH, to prevent infinite loops
         }
     }
 
-    // Reports a lexical error and records the fact that an error has occurred. This fact can be ascertained from the
-    // Scanner by sending it an errorHasOccurred message.
+    // Reports a lexical error and records the fact that an error has occurred.
     private void reportScannerError(String message, Object... args) {
         isInError = true;
         System.err.printf("%s:%d: error: ", fileName, line);
@@ -353,12 +547,12 @@ class Scanner {
 
     // Returns true if the specified character can start an identifier name, and false otherwise.
     private boolean isIdentifierStart(char c) {
-        return (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_' || c == '$');
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '$';
     }
 
     // Returns true if the specified character can be part of an identifier name, and false otherwise.
     private boolean isIdentifierPart(char c) {
-        return (isIdentifierStart(c) || isDigit(c));
+        return isIdentifierStart(c) || isDigit(c);
     }
 }
 
@@ -396,7 +590,12 @@ class CharReader {
      * @throws IOException if an I/O error occurs.
      */
     public char nextChar() throws IOException {
-        return (char) lineNumberReader.read();
+        int next = lineNumberReader.read();
+        if (next == -1) {
+            return EOFCH;
+        } else {
+            return (char) next;
+        }
     }
 
     /**

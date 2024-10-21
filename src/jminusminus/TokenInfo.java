@@ -126,8 +126,69 @@ enum TokenKind {
     WHILE("while"),
 
     /**
-     * Operator, "=".
+     * **New Reserved Words**
      */
+
+    /**
+     * Reserved word, "break".
+     */
+    BREAK("break"),
+
+    /**
+     * Reserved word, "case".
+     */
+    CASE("case"),
+
+    /**
+     * Reserved word, "continue".
+     */
+    CONTINUE("continue"),
+
+    /**
+     * Reserved word, "default".
+     */
+    DEFAULT("default"),
+
+    /**
+     * Reserved word, "double".
+     */
+    DOUBLE("double"),
+
+    /**
+     * Reserved word, "for".
+     */
+    FOR("for"),
+
+    /**
+     * Reserved word, "long".
+     */
+    LONG("long"),
+
+    /**
+     * Reserved word, "switch".
+     */
+    SWITCH("switch"),
+    
+    DO("do"),
+
+    MINUS_ASSIGN("-="),
+
+    STAR_ASSIGN("*="),
+
+    DIV_ASSIGN("/="),
+
+    MOD_ASSIGN("%="),
+
+    NOT_EQUAL("!="),
+
+    GREATER_EQUAL(">="),
+
+    OR_OR("||"),
+
+    AMPERSAND("&"),
+
+    TILDE("~"),
+
     ASSIGN("="),
 
     /**
@@ -145,18 +206,20 @@ enum TokenKind {
      */
     GT(">"),
 
+    LT("<"),
+
     /**
      * Operator, "++".
      */
     INC("++"),
 
     /**
-     * Operator, "&amp;&amp;".
+     * Operator, "&&".
      */
     LAND("&&"),
 
     /**
-     * Operator, "&lt;=".
+     * Operator, "<=".
      */
     LE("<="),
 
@@ -185,6 +248,14 @@ enum TokenKind {
      */
     STAR("*"),
 
+    DIV("/"),
+
+    MOD("%"),
+
+    COLON(":"),
+
+    QUESTION("?"),
+
     /**
      * Separator, ",".
      */
@@ -201,7 +272,7 @@ enum TokenKind {
     LBRACK("["),
 
     /**
-     * Separator, "{}".
+     * Separator, "{".
      */
     LCURLY("{"),
 
@@ -249,6 +320,10 @@ enum TokenKind {
      * String literal.
      */
     STRING_LITERAL("<STRING_LITERAL>"),
+
+    LONG_LITERAL("<LONG_LITERAL>"),
+
+    DOUBLE_LITERAL("<DOUBLE_LITERAL>"),
 
     /**
      * End of file character.
@@ -365,5 +440,10 @@ class TokenInfo {
      */
     public String image() {
         return image;
+    }
+
+    @Override
+    public String toString() {
+        return line + " : " + tokenRep() + " = " + kind;
     }
 }
